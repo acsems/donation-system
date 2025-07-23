@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+  <data>
+
+    <!-- ✅ Rename the Sales menu to Donations -->
+    <record id="crm.crm_menu_sales" model="ir.ui.menu">
+      <field name="name">Donations</field>
+    </record>
+
+    <!-- ✅ Hide 'Pipeline' (Opportunities) and 'My Activities' menus -->
+    <record id="crm.menu_crm_opportunities" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+    </record>
+
+    <record id="crm.crm_lead_menu_my_activities" model="ir.ui.menu">
+      <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+    </record>
+
+      <record id="crm.sales_team_menu_team_pipeline" model="ir.ui.menu">
+           <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+      </record>
+
+       <record id="crm.res_partner_menu_customer" model="ir.ui.menu">
+           <field name="groups_id" eval="[(6, 0, [ref('base.group_no_one')])]"/>
+      </record>
+
+
+     <menuitem
+      id="menu_donor_volunteer"
+      name="Donors/Volunteer"
+      parent="crm.crm_menu_sales"
+      action="base.action_partner_form"
+      sequence="1" />
+
+    <!-- ✅ Add Donations submenu (under Donations main menu) -->
+    <menuitem
+      id="menu_donation_record"
+      name="Donation"
+      parent="crm.crm_menu_sales"
+      action="donation_system.action_donation_sale_records"
+      sequence="2" />
+
+      <menuitem id="menu_donation" name="Donations"  sequence="210" web_icon="donation_system/static/description/icon.png"  />
+      <menuitem id="menu_donation_config" name="Configuration" parent="menu_donation" sequence="4" />
+
+  </data>
+</odoo>
