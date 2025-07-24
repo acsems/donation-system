@@ -8,35 +8,123 @@ class DonationPortal(http.Controller):
     def donation_home(self, **kwargs):
         return request.render("donation_system.donation_selection_template", {})
 
+    # @http.route('/donate/form', type='http', auth='public', website=True, csrf=False)
+    # def donation_form(self, **post):
+    #     # Step 1: Store form data into session
+    #     donation_data = {
+    #         'donor_type': post.get('donor_type'),
+    #         'frequency': post.get('frequency'),
+    #         'amount': post.get('amount'),
+    #         'other_amount': post.get('other_amount'),
+    #         'email': post.get('email'),
+    #     }
+    #     request.session['donation_data'] = donation_data
+    #
+    #     donor_type = post.get('donor_type')
+    #     user = request.env.user
+    #     is_logged_in = user and user.id != request.env.ref('base.public_user').id
+    #
+    #     # ✅ If user already logged in, go directly to review page
+    #     if is_logged_in:
+    #         user_email = user.email
+    #         if user_email:
+    #             partner = request.env['res.partner'].sudo().search([('email', '=', user_email)], limit=1)
+    #             if partner:
+    #                 donation_data.update({
+    #                     'name': partner.name,
+    #                     'nric': partner.identification_number,
+    #                     'email': partner.email,
+    #                     'contact': partner.phone,
+    #                     'postal_code': partner.zip,
+    #                     'street': partner.street,
+    #                     'unit_no': partner.street2,
+    #                     'sex': partner.sex,
+    #                     'partner_id': partner.id,
+    #                 })
+    #                 request.session['donation_data'] = donation_data
+    #         return request.redirect('/donate/review')
+    #
+    #     # ✅ Place this code block here
+    #     if not is_logged_in and post.get('email'):
+    #         email = post.get('email')
+    #         partner = request.env['res.partner'].sudo().search([('email', '=', email)], limit=1)
+    #         if partner:
+    #             donation_data.update({
+    #                 'name': partner.name,
+    #                 'nric': partner.identification_number,
+    #                 'email': partner.email,
+    #                 'contact': partner.phone,
+    #                 'postal_code': partner.zip,
+    #                 'street': partner.street,
+    #                 'unit_no': partner.street2,
+    #                 'sex': partner.sex,
+    #                 'partner_id': partner.id,
+    #             })
+    #             request.session['donation_data'] = donation_data
+    #             return request.redirect('/donate/review')
+    #
+    #     # ✅ Not logged in, check donor_type and redirect
+    #     if donor_type == 'individual':
+    #         email = post.get('email')
+    #         if not email:
+    #             return request.redirect('/donate/individual-auth-choice')
+    #
+    #         partner = request.env['res.partner'].sudo().search([('email', '=', email)], limit=1)
+    #         if partner:
+    #             return request.redirect('/donate/individual-auth-choice')
+    #         else:
+    #             return request.redirect('/donate/signup-choice')
+    #
+    #     return request.redirect('/donate/individual-auth-choice')
+
     @http.route('/donate/form', type='http', auth='public', website=True, csrf=False)
     def donation_form(self, **post):
-        # Store donation data in session
-        request.session['donation_data'] = {
+        # Step 1: Store form data into session
+        donation_data = {
             'donor_type': post.get('donor_type'),
             'frequency': post.get('frequency'),
             'amount': post.get('amount'),
             'other_amount': post.get('other_amount'),
+            'email': post.get('email'),
         }
+        request.session['donation_data'] = donation_data
 
         donor_type = post.get('donor_type')
         user = request.env.user
-        is_logged_in = user and user.id != request.env.ref('base.public_user').id
-        print("###############",is_logged_in)
+        # is_logged_in = user and user.id != request.env.ref('base.public_user').id
+        #
+        # # ✅ If user already logged in, go directly to review page
+        # if is_logged_in:
+        #     user_email = user.email
+        #     if user_email:
+        #         partner = request.env['res.partner'].sudo().search([('email', '=', user_email)], limit=1)
+        #         if partner:
+        #             donation_data.update({
+        #                 'name': partner.name,
+        #                 'nric': partner.identification_number,
+        #                 'email': partner.email,
+        #                 'contact': partner.phone,
+        #                 'postal_code': partner.zip,
+        #                 'street': partner.street,
+        #                 'unit_no': partner.street2,
+        #                 'sex': partner.sex,
+        #                 'partner_id': partner.id,
+        #             })
+        #             request.session['donation_data'] = donation_data
+        #     return request.redirect('/donate/review')
 
-        # Redirect based on donor type and login status
+        # ✅ Not logged in, check email in res.partner
         if donor_type == 'individual':
-            return request.redirect('/donate/individual-auth-choice')
+            email = post.get('email')
+            if not email:
+                return request.redirect('/donate/individual-auth-choice')
 
-        elif donor_type == 'corporate':
-            if not is_logged_in:
-                return request.redirect('/corporate/login')  # or your custom route
+            partner = request.env['res.partner'].sudo().search([('email', '=', email)], limit=1)
+            if partner:
+                return request.redirect('/donate/individual-auth-choice')
             else:
-                return request.redirect('/signup/info')  # or another route if needed
+                return request.redirect('/donate/signup-choice')
 
-        elif donor_type == 'anonymous':
-            return request.redirect('/donate/anonymous')  # if you have an anonymous flow
-
-        # Fallback
         return request.redirect('/donate/individual-auth-choice')
 
     @http.route(['/donate/individual-auth-choice'], type='http', auth="public", website=True)
@@ -143,3 +231,88 @@ class DonationPortal(http.Controller):
     @http.route('/thank-you', type='http', auth='public', website=True)
     def thank_you(self):
         return "<h2>Thank you for signing up!</h2>"
+
+    @http.route('/donate/review', type='http', auth='user', website=True)
+    def donation_review(self, **kwargs):
+        # Fetch user from session
+        user = request.env.user
+        partner = user.partner_id
+
+        # Fetch donation data from session or init default
+        donation_data = request.session.get('donation_data', {})
+
+        # Update donation_data with user info
+        donation_data.update({
+            'name': partner.name or '',
+            'nric': partner.identification_number or '',
+            'email': user.email or '',
+            'contact': partner.phone or '',
+            'postal_code': partner.zip or '',
+            'street': partner.street or '',
+            'unit_no': partner.street2 or '',
+            'sex': partner.sex or '',
+        })
+
+        return request.render('donation_system.donation_payment_step', {
+            'data': donation_data
+        })
+
+    # @http.route('/donate/review', type='http', auth='public', website=True, csrf=False)
+    # def donation_review(self, **kwargs):
+    #     donation_data = request.session.get('donation_data', {})
+    #     return request.render('donation_system.donation_payment_step', {'data': donation_data})
+
+    @http.route('/corporate/login', type='http', auth='public', website=True)
+    def corporate_login_page(self, **kw):
+        return request.render('donation_system.corporate_login_page')
+
+    @http.route('/corporate/signup', type='http', auth='public', website=True)
+    def corporate_signup_form(self, **kwargs):
+        return request.render('donation_system.corporate_signup_form')
+
+    @http.route('/corporate/signup/submit', type='http', auth='public', methods=['POST'], website=True)
+    def handle_corporate_signup(self, **post):
+        request.env['res.partner'].sudo().create({
+            'name': post.get('name'),
+            'email': post.get('email'),
+            'phone': post.get('phone'),
+            'identification_type': 'uen',
+            'identification_number': post.get('uen'),
+            'designation': post.get('designation'),
+            'street': post.get('street'),
+            'zip': post.get('postal_code'),
+            'donor_type': 'corporate',
+            'is_donor': 'true'
+        })
+        return request.redirect('/thank-you')
+        # Save to model (create record) or handle as per your logic
+        # request.env['res.partner'].sudo().create({
+        #     'name': post.get('name'),
+        #     'email': post.get('email'),
+        #     'phone': post.get('phone'),
+        #     'function': post.get('designation'),
+        #     # Add UEN, company_name, address, etc. to your model if you extend it
+        # })
+        # return request.redirect('/thank-you')
+        # return request.render('donation_system.signup_thank_you')
+
+    @http.route('/donate/anonymous', type='http', auth='public', website=True)
+    def anonymous_email_form(self, **kwargs):
+        return request.render('donation_system.anonymous_email_prompt', {})
+
+    @http.route('/donate/anonymous/submit', type='http', auth='public', website=True, methods=['POST'])
+    def anonymous_email_submit(self, **post):
+        email = post.get('email')
+
+        if not email:
+            return request.render('donation_system.anonymous_email_prompt', {'error': True})
+
+        request.env['res.partner'].sudo().create({
+            'name': 'Anonymous',
+            'email': email,
+            'identification_type': 'email',
+            'identification_number': email,
+            'donor_type': 'anonymous',
+        })
+
+        return request.redirect('/thank-you')
